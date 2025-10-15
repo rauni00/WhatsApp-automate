@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Recipients Dashboard</title>
+  <style>
+    table { border-collapse: collapse; width: 80%; margin: 20px auto; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+    form { display: inline; }
+    h1, h2 { text-align: center; }
+    input { padding: 5px; margin: 5px; }
+    button { padding: 5px 10px; margin: 2px; }
+  </style>
+</head>
+<body>
+  <h1>Recipients Dashboard</h1>
+
+  <h2>Add New Recipient</h2>
+  <form action="/recipients/add" method="POST">
+    <input type="text" name="name" placeholder="Name" required>
+    <input type="text" name="number" placeholder="Number" required>
+    <button type="submit">Add</button>
+  </form>
+
+  <h2>Existing Recipients</h2>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Number</th>
+      <th>Actions</th>
+    </tr>
+    <% recipients.forEach(r => { %>
+      <tr>
+        <form action="/recipients/edit" method="POST">
+          <td><input type="text" name="name" value="<%= r.name %>" required></td>
+          <td>
+            <input type="text" name="number" value="<%= r.number %>" required>
+            <input type="hidden" name="oldNumber" value="<%= r.number %>">
+          </td>
+          <td>
+            <button type="submit">Update</button>
+        </form>
+        <form action="/recipients/delete" method="POST" style="display:inline;">
+          <input type="hidden" name="number" value="<%= r.number %>">
+          <button type="submit">Delete</button>
+        </form>
+          </td>
+      </tr>
+    <% }) %>
+  </table>
+  <p style="text-align:center;"><a href="/">Back to QR Page</a> | <a href="/logs">View Logs</a></p>
+</body>
+</html>
