@@ -47,6 +47,26 @@
       </tr>
     <% }) %>
   </table>
+
+  <h2>Send Instant Message</h2>
+<form action="/send-message" method="POST">
+  <select name="number" required>
+    <% recipients.forEach(r => { %>
+      <option value="<%= r.number %>"><%= r.name %> - <%= r.number %></option>
+    <% }) %>
+  </select>
+  <input type="text" name="message" placeholder="Type your message" required>
+  <button type="submit">Send</button>
+</form>
+
+<h2>QR Status</h2>
+<p>
+  <% if (!isAuthenticated) { %>
+    Scan the QR above to authenticate WhatsApp
+  <% } else { %>
+    ✅ WhatsApp authenticated!
+  <% } %>
+</p>
   <p style="text-align:center;"><a href="/">Back to QR Page</a> | <a href="/logs">View Logs</a></p>
 </body>
 </html>
