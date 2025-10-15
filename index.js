@@ -27,6 +27,7 @@ app.set("view engine", "ejs");
 // Store QR and logs
 let currentQR = null;
 const logs = [];
+let isAuthenticated = false;
 
 // Recipients in-memory
 let recipients = [
@@ -67,10 +68,16 @@ ${name} के लिए एक प्यारा सा गुड मॉर्
 client.on("qr", async (qr) => {
   logs.push("📌 QR Code generated, scan it in WhatsApp Web app");
   currentQR = await qrcode.toDataURL(qr);
+  isAuthenticated = false;
 });
 
 client.on("ready", () => {
   logs.push("✅ WhatsApp Client is ready!");
+  isAuthenticated = true; // hide QR
+  currentQR = null; // remove QR from UI
+  logs.push("✅ Daily message scheduler set for 7:00 AM");
+
+  // Daily cron
   cron.schedule("0 7 * * *", async () => {
     logs.push("⏰ Sending Morning Messages...");
     for (const user of recipients) {
@@ -85,10 +92,7 @@ client.on("ready", () => {
       }
     }
   });
-  logs.push("✅ Daily message scheduler set for 7:00 AM");
 });
-
-client.initialize();
 
 // Express Routes
 
@@ -121,9 +125,8 @@ ${logs.join("\n")}
 
 // Dashboard: List recipients
 app.get("/recipients", (req, res) => {
-  res.render("recipients", { recipients });
+  res.render("recipients", { recipients, logs, isAuthenticated });
 });
-
 // Add recipient
 app.post("/recipients/add", (req, res) => {
   const { name, number } = req.body;
@@ -134,6 +137,22 @@ app.post("/recipients/add", (req, res) => {
   recipients.push({ name, number });
   logs.push(`✅ Added recipient ${name} (${number})`);
   res.redirect("/recipients");
+});
+
+app.post("/send-message", async (req, res) => {
+  const { number, message } = req.body;
+  if (!number || !message) return res.send("Number and message required");
+
+  try {
+    await client.sendMessage(`${number}@c.us`, message);
+    logs.push(`📩 Instant message sent to ${number}`);
+    res.redirect("/recipients");
+  } catch (error) {
+    logs.push(
+      `❌ Failed to send instant message to ${number}: ${error.message}`
+    );
+    res.redirect("/recipients");
+  }
 });
 
 // Edit recipient
@@ -163,4 +182,5 @@ app.post("/recipients/delete", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🌐 Server running at http://localhost:${PORT}`);
   logs.push(`🌐 Server running at http://localhost:${PORT}`);
+  client.initialize();
 });
