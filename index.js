@@ -4,8 +4,6 @@ const { GoogleGenAI } = require("@google/genai");
 const cron = require("node-cron");
 require("dotenv").config();
 
-const port = process.env.PORT || 8080;
-
 if (!process.env.API_KEY) {
   console.error("❌ Missing API_KEY in .env");
   process.exit(1);
@@ -73,3 +71,4 @@ client.on("ready", async () => {
 });
 
 client.initialize();
+
