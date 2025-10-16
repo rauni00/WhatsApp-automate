@@ -5,6 +5,7 @@ const cron = require("node-cron");
 const express = require("express");
 const bodyParser = require("body-parser");
 const path = require("path");
+const session = require("express-session");
 require("dotenv").config();
 
 if (!process.env.API_KEY) {
@@ -41,11 +42,56 @@ let recipients = [
 
 // Generate Hindi Morning Message
 async function generateMorningMessage(name) {
+  const fallbackMessages = [
+    "🌞 सुप्रभात! आज का दिन शानदार रहे। 🔥 मेहनत करने वालों के लिए आसमान भी छोटा पड़ जाता है!",
+    "🌞 खुशियों से भरा दिन हो! 🔥 आज अपने लक्ष्य की ओर छोटे-छोटे कदम बढ़ाएं!",
+    "🌞 शुभ प्रभात! 🔥 अपने सपनों को सच करने के लिए आज एक कदम आगे बढ़ाएँ!",
+  ];
+
   const prompt = `
-${name} के लिए एक प्यारा सा गुड मॉर्निंग संदेश लिखो (हिंदी में), शुरुआत में "🌞" आइकॉन का उपयोग करो और इसे दिल से, पॉज़िटिव और थोड़ा पर्सनल बनाओ।
-फिर नीचे एक मोटिवेशनल लाइन लिखो (बिना किसी टाइटल के), जिसमें "🔥" आइकॉन हो और जो दिन की शुरुआत के लिए प्रेरित करे।
+${name} के लिए एक प्यारा सा गुड मॉर्निंग संदेश लिखो (हिंदी में)। शुरुआत में "🌞" आइकॉन का उपयोग करो। 
+इसे दिल से, पॉज़िटिव और थोड़ा पर्सनल बनाओ। 
+फिर नीचे एक मोटिवेशनल लाइन लिखो (बिना किसी टाइटल के) जिसमें "🔥" आइकॉन हो और जो दिन की शुरुआत के लिए प्रेरित करे। 
 पूरी बात 40-50 शब्दों के अंदर रखें।
 `;
+
+  try {
+    const contents = [
+      { role: "user", parts: [{ type: "text", text: prompt }] },
+    ];
+    const result = await ai.models.generateContent({
+      model: modelId,
+      contents,
+    });
+    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+    return (
+      text ||
+      fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)]
+    );
+  } catch (error) {
+    logs.push(
+      `${new Date().toLocaleString()} ❌ AI Error for ${name}: ${error.message}`
+    );
+    return fallbackMessages[
+      Math.floor(Math.random() * fallbackMessages.length)
+    ];
+  }
+}
+
+async function generateGoodNightMessage(name) {
+  const fallbackMessages = [
+    "🌙 शुभ रात्रि! आराम करें और अच्छे सपने देखें। 🔥 कल का दिन आपके लिए शानदार हो!",
+    "🌙 सुप्रभात की तरह, अब रात भी आपके लिए पॉज़िटिव हो। 🔥 सोते समय अपने सपनों को याद करें!",
+    "🌙 रात के लिए शुभकामनाएँ! 🔥 कल नई ऊर्जा और उमंग के साथ उठें!",
+  ];
+
+  const prompt = `
+${name} के लिए एक प्यारा सा गुड नाईट संदेश लिखो (हिंदी में), शुरुआत में "🌙" आइकॉन का उपयोग करो। 
+इसे दिल से, पॉज़िटिव और थोड़ा पर्सनल बनाओ। 
+फिर नीचे एक मोटिवेशनल लाइन लिखो (बिना किसी टाइटल के) जिसमें "🔥" आइकॉन हो और दिन के अंत के लिए प्रेरित करे। 
+पूरी बात 40-50 शब्दों के अंदर रखें।
+`;
+
   try {
     const contents = [
       { role: "user", parts: [{ type: "text", text: prompt }] },
@@ -56,11 +102,17 @@ ${name} के लिए एक प्यारा सा गुड मॉर्
     });
     return (
       result?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "🌞 सुप्रभात! आज का दिन शानदार रहे। 🔥 मेहनत करने वालों के लिए आसमान भी छोटा पड़ जाता है!"
+      fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)]
     );
   } catch (error) {
-    logs.push(`❌ AI Error for ${name}: ${error.message}`);
-    return "🌞 सुप्रभात! आज का दिन शानदार रहे। 🔥 मेहनत करने वालों के लिए आसमान भी छोटा पड़ जाता है!";
+    logs.push(
+      `${new Date().toLocaleString()} ❌ AI Error for ${name} (Good Night): ${
+        error.message
+      }`
+    );
+    return fallbackMessages[
+      Math.floor(Math.random() * fallbackMessages.length)
+    ];
   }
 }
 
@@ -92,25 +144,120 @@ client.on("ready", () => {
       }
     }
   });
+
+  cron.schedule("30 22 * * *", async () => {
+    logs.push("⏰ Sending Good Night Messages...");
+    for (const user of recipients) {
+      try {
+        const message = await generateGoodNightMessage(user.name);
+        await client.sendMessage(`${user.number}@c.us`, message);
+        logs.push(
+          `✅ Good Night message sent to ${user.name} (${user.number})`
+        );
+      } catch (error) {
+        logs.push(
+          `❌ Failed to send Good Night message to ${user.name}: ${error.message}`
+        );
+      }
+    }
+  });
+});
+
+client.on("disconnected", (reason) => {
+  logs.push(`❌ WhatsApp disconnected: ${reason}. Re-initializing...`);
+  client.initialize();
 });
 
 // Express Routes
 
+// Session setup
+app.use(
+  session({
+    secret: "ss##$%$#supersecretkey",
+    resave: false,
+    saveUninitialized: true,
+    cookie: { maxAge: 60 * 60 * 1000 },
+  })
+);
+
+// Hardcoded password (or store in .env)
+const AUTH_PASSWORD = "rr8546001170";
+
+// Middleware to protect routes
+function isAuthenticatedMiddleware(req, res, next) {
+  if (req.session?.authenticated) {
+    return next();
+  }
+  res.redirect("/login");
+}
+
+// Login page
+app.get("/login", (req, res) => {
+  res.send(`
+    <h1>Login</h1>
+    <form method="POST" action="/login">
+      <input type="password" name="password" placeholder="Enter password" required />
+      <button type="submit">Login</button>
+    </form>
+  `);
+});
+
+// Handle login
+app.post("/login", (req, res) => {
+  const { password } = req.body;
+  if (password === AUTH_PASSWORD) {
+    req.session.authenticated = true;
+    return res.redirect("/recipients");
+  }
+  res.send("❌ Wrong password. <a href='/login'>Try again</a>");
+});
+
+app.post("/logout", async (req, res) => {
+  try {
+    await client.destroy();
+    currentQR = null;
+    isAuthenticated = false;
+    logs.push("❌ Logged out from WhatsApp");
+    res.redirect("/");
+  } catch (error) {
+    logs.push(`❌ Failed to logout WhatsApp: ${error.message}`);
+    res.redirect("/recipients");
+  }
+});
+
+// Logout route
+app.get("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.redirect("/login");
+  });
+});
+
 // QR page
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
+  // If WhatsApp not authenticated and no QR, re-initialize client
+  if (!isAuthenticated && !currentQR) {
+    logs.push("🔄 Generating new QR...");
+    try {
+      await client.initialize(); // trigger QR event
+    } catch (err) {
+      logs.push(`❌ Error generating QR: ${err.message}`);
+    }
+  }
+
   res.send(`
     <h1>Scan this QR to authenticate WhatsApp</h1>
     ${
       currentQR
         ? `<img src="${currentQR}" />`
-        : "<p>QR code not generated yet</p>"
+        : "<p>QR code not generated yet. Please wait a few seconds...</p>"
     }
     <p><a href="/recipients">Go to Recipients Dashboard</a></p>
   `);
 });
 
+
 // Logs page
-app.get("/logs", (req, res) => {
+app.get("/logs", isAuthenticatedMiddleware, (req, res) => {
   res.send(`
     <h1>Logs</h1>
     <pre style="background:#f5f5f5; padding:10px; height:400px; overflow:auto;">
@@ -124,11 +271,11 @@ ${logs.join("\n")}
 });
 
 // Dashboard: List recipients
-app.get("/recipients", (req, res) => {
+app.get("/recipients", isAuthenticatedMiddleware, (req, res) => {
   res.render("recipients", { recipients, logs, isAuthenticated });
 });
 // Add recipient
-app.post("/recipients/add", (req, res) => {
+app.post("/recipients/add", isAuthenticatedMiddleware, (req, res) => {
   const { name, number } = req.body;
   if (!name || !number) return res.send("Name and number are required");
 
@@ -139,24 +286,32 @@ app.post("/recipients/add", (req, res) => {
   res.redirect("/recipients");
 });
 
-app.post("/send-message", async (req, res) => {
+app.post("/send-message", isAuthenticatedMiddleware, async (req, res) => {
   const { number, message } = req.body;
-  if (!number || !message) return res.send("Number and message required");
+  if (!number) return res.send("Number is required");
+
+  const user = recipients.find((r) => r.number === number);
+  if (!user) return res.send("Recipient not found");
+
+  // If no custom message, generate Good Morning
+  const msg = message || (await generateMorningMessage(user.name));
 
   try {
-    await client.sendMessage(`${number}@c.us`, message);
-    logs.push(`📩 Instant message sent to ${number}`);
+    await client.sendMessage(`${number}@c.us`, msg);
+    logs.push(
+      `📩 Instant Good Morning message sent to ${user.name} (${number})`
+    );
     res.redirect("/recipients");
   } catch (error) {
     logs.push(
-      `❌ Failed to send instant message to ${number}: ${error.message}`
+      `❌ Failed to send instant message to ${user.name} (${number}): ${error.message}`
     );
     res.redirect("/recipients");
   }
 });
 
 // Edit recipient
-app.post("/recipients/edit", (req, res) => {
+app.post("/recipients/edit", isAuthenticatedMiddleware, (req, res) => {
   const { oldNumber, name, number } = req.body;
   const recipient = recipients.find((r) => r.number === oldNumber);
   if (!recipient) return res.send("Recipient not found");
@@ -168,7 +323,7 @@ app.post("/recipients/edit", (req, res) => {
 });
 
 // Delete recipient
-app.post("/recipients/delete", (req, res) => {
+app.post("/recipients/delete", isAuthenticatedMiddleware, (req, res) => {
   const { number } = req.body;
   const index = recipients.findIndex((r) => r.number === number);
   if (index !== -1) {

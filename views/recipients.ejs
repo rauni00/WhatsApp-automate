@@ -3,70 +3,244 @@
 <head>
   <title>Recipients Dashboard</title>
   <style>
-    table { border-collapse: collapse; width: 80%; margin: 20px auto; }
-    th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-    form { display: inline; }
-    h1, h2 { text-align: center; }
-    input { padding: 5px; margin: 5px; }
-    button { padding: 5px 10px; margin: 2px; }
+    /* ===== Reset some default styles ===== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      color: #333;
+      min-height: 100vh;
+      padding: 20px;
+      animation: fadeInBody 1.5s ease-in-out;
+    }
+
+    @keyframes fadeInBody {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #2c3e50;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      animation: slideDown 1s ease;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 90%;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      animation: fadeInTable 1.5s ease;
+    }
+
+    @keyframes fadeInTable {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    th, td {
+      padding: 15px 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #3498db;
+      color: white;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 14px;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    tr:hover {
+      background-color: #d6eaf8;
+      transform: scale(1.02);
+      transition: all 0.3s ease;
+    }
+
+    form {
+      display: inline;
+    }
+
+    input, select, button {
+      padding: 8px 12px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      outline: none;
+      transition: all 0.3s ease;
+      font-size: 14px;
+    }
+
+    input:focus, select:focus {
+      border-color: #3498db;
+      box-shadow: 0 0 5px rgba(52,152,219,0.5);
+    }
+
+    button {
+      background-color: #3498db;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    form[action="/send-message"] {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    form[action="/send-message"] input {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    form[action="/send-message"] select {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    p {
+      text-align: center;
+      margin: 15px 0;
+      font-size: 16px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+      margin: 0 10px;
+      transition: all 0.3s ease;
+    }
+
+    a:hover {
+      text-decoration: underline;
+      color: #2980b9;
+    }
+
+    /* Animations for headings */
+    h2 {
+      margin-top: 40px;
+    }
+
+    /* Subtle card effect for forms */
+    form {
+      background: #fff;
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+      margin: 10px auto;
+      width: fit-content;
+      animation: fadeInForm 1.2s ease;
+    }
+
+    @keyframes fadeInForm {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
-  <h1>Recipients Dashboard</h1>
+  <h1 style="text-align:center;">Recipients Dashboard</h1>
 
-  <h2>Add New Recipient</h2>
-  <form action="/recipients/add" method="POST">
-    <input type="text" name="name" placeholder="Name" required>
-    <input type="text" name="number" placeholder="Number" required>
-    <button type="submit">Add</button>
-  </form>
+  <% if (isAuthenticated) { %>
+    <form action="/logout" method="POST" style="position:absolute; top:20px; right:20px;">
+      <button type="submit" style="
+        padding: 10px 20px; 
+        background-color: #e74c3c; 
+        color: #fff; 
+        border: none; 
+        border-radius: 5px; 
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+      ">
+        Logout
+      </button>
+    </form>
 
-  <h2>Existing Recipients</h2>
-  <table>
-    <tr>
-      <th>Name</th>
-      <th>Number</th>
-      <th>Actions</th>
-    </tr>
-    <% recipients.forEach(r => { %>
+    <h2>Add New Recipient</h2>
+    <form action="/recipients/add" method="POST" style="text-align:center; margin-bottom: 30px;">
+      <input type="text" name="name" placeholder="Name" required>
+      <input type="text" name="number" placeholder="Number" required>
+      <button type="submit">Add</button>
+    </form>
+
+    <h2>Existing Recipients</h2>
+    <table>
       <tr>
-        <form action="/recipients/edit" method="POST">
-          <td><input type="text" name="name" value="<%= r.name %>" required></td>
-          <td>
-            <input type="text" name="number" value="<%= r.number %>" required>
-            <input type="hidden" name="oldNumber" value="<%= r.number %>">
-          </td>
-          <td>
-            <button type="submit">Update</button>
-        </form>
-        <form action="/recipients/delete" method="POST" style="display:inline;">
-          <input type="hidden" name="number" value="<%= r.number %>">
-          <button type="submit">Delete</button>
-        </form>
-          </td>
+        <th>Name</th>
+        <th>Number</th>
+        <th>Actions</th>
       </tr>
-    <% }) %>
-  </table>
+      <% recipients.forEach(r => { %>
+        <tr>
+          <form action="/recipients/edit" method="POST">
+            <td><input type="text" name="name" value="<%= r.name %>" required></td>
+            <td>
+              <input type="text" name="number" value="<%= r.number %>" required>
+              <input type="hidden" name="oldNumber" value="<%= r.number %>">
+            </td>
+            <td>
+              <button type="submit">Update</button>
+          </form>
+          <form action="/recipients/delete" method="POST" style="display:inline;">
+            <input type="hidden" name="number" value="<%= r.number %>">
+            <button type="submit">Delete</button>
+          </form>
+            </td>
+        </tr>
+      <% }) %>
+    </table>
 
-  <h2>Send Instant Message</h2>
-<form action="/send-message" method="POST">
-  <select name="number" required>
-    <% recipients.forEach(r => { %>
-      <option value="<%= r.number %>"><%= r.name %> - <%= r.number %></option>
-    <% }) %>
-  </select>
-  <input type="text" name="message" placeholder="Type your message" required>
-  <button type="submit">Send</button>
-</form>
+    <h2>Send Instant Message</h2>
+    <form action="/send-message" method="POST" style="text-align:center;">
+      <select name="number" required>
+        <% recipients.forEach(r => { %>
+          <option value="<%= r.number %>"><%= r.name %> - <%= r.number %></option>
+        <% }) %>
+      </select>
+      <input type="text" name="message" placeholder="Type your message">
+      <button type="submit">Send</button>
+    </form>
 
-<h2>QR Status</h2>
-<p>
-  <% if (!isAuthenticated) { %>
-    Scan the QR above to authenticate WhatsApp
   <% } else { %>
-    ✅ WhatsApp authenticated!
+    <h2 style="text-align:center; color:#e67e22; margin-top:50px;">
+      ❗ Please scan the QR code above to authenticate WhatsApp
+    </h2>
   <% } %>
-</p>
-  <p style="text-align:center;"><a href="/">Back to QR Page</a> | <a href="/logs">View Logs</a></p>
+
+  <p style="text-align:center; margin-top:30px;">
+    <a href="/">Back to QR Page</a> | 
+    <a href="/logs">View Logs</a>
+  </p>
 </body>
+
 </html>
